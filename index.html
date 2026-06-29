@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hệ thống điều hòa không khí thông minh</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/moment.min.js"></script>
+
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap');
+
+    body {
+      margin: 0;
+      font-family: 'Nunito', sans-serif;
+      color: #2c3e50;
+      min-height: 100vh;
+      position: relative;
+    }
+
+    .air-background {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      z-index: -1;
+      overflow: hidden;
+      background: #eef2f3;
+    }
+
+    .heat-wave {
+      position: absolute;
+      width: 70vw;
+      height: 70vw;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(255, 154, 107, 0.4) 0%, rgba(255, 154, 107, 0) 70%);
+      top: -20vw;
+      right: -15vw;
+      filter: blur(60px);
+      animation: pulseHeat 20s infinite alternate ease-in-out;
+    }
+
+    .humidity-cloud {
+      position: absolute;
+      width: 80vw;
+      height: 80vw;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(107, 212, 255, 0.4) 0%, rgba(107, 212, 255, 0) 70%);
+      bottom: -30vw;
+      left: -20vw;
+      filter: blur(80px);
+      animation: driftHumidity 25s infinite alternate ease-in-out;
+    }
+
+    .dust-particles {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-image:
+        radial-gradient(rgba(80, 90, 100, 0.3) 1.5px, transparent 1.5px),
+        radial-gradient(rgba(80, 90, 100, 0.15) 2.5px, transparent 2.5px);
+      background-size: 70px 70px, 120px 120px;
+      background-position: 0 0, 40px 40px;
+      animation: windBlow 60s linear infinite;
+    }
+
+    @keyframes pulseHeat {
+      0% { transform: scale(1) translate(0, 0); opacity: 0.7; }
+      100% { transform: scale(1.3) translate(-10vw, 10vh); opacity: 1; }
+    }
+
+    @keyframes driftHumidity {
+      0% { transform: scale(1) translate(0, 0); opacity: 0.8; }
+      100% { transform: scale(1.2) translate(15vw, -10vh); opacity: 1; }
+    }
+
+    @keyframes windBlow {
+      0% { background-position: 0px 0px, 40px 40px; }
+      100% { background-position: 700px 700px, 1240px 1240px; }
+    }
+
+    .school-header {
+      max-width: 1120px;
+      margin: 28px auto 18px auto;
+      padding: 22px 32px;
+      display: grid;
+      grid-template-columns: 130px 1fr 130px;
+      align-items: center;
+      text-align: center;
+      background: rgba(255, 255, 255, 0.58);
+      border: 1px solid rgba(255, 255, 255, 0.82);
+      border-radius: 24px;
+      box-shadow: 0 12px 42px rgba(31, 38, 135, 0.10);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+    }
+
+    .school-logo-box {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .school-logo {
+      width: 95px;
+      height: 95px;
+      object-fit: contain;
+      filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.12));
+    }
+
+    .school-text-box {
+      text-align: center;
+      padding: 0 18px;
+    }
+
+    .school-title,
+    .faculty-title {
+      margin: 0;
+      font-size: 1.18rem;
+      font-weight: 800;
+      color: #123766;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+      line-height: 1.35;
+    }
+
+    .faculty-title {
+      margin-top: 6px;
+    }
+
+    .project-title {
+      margin: 10px 0 0;
+      font-size: 2.15rem;
+      font-weight: 900;
+      color: #0f2f55;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+    }
+
+    @media (max-width: 576px) {
+      .school-header {
+        margin: 18px 12px 14px;
+        padding: 16px 12px;
+        grid-template-columns: 62px 1fr 62px;
+      }
+
+      .school-logo {
+        width: 54px;
+        height: 54px;
+      }
+
+      .school-text-box {
+        padding: 0 8px;
+      }
+
+      .school-title,
+      .faculty-title {
+        font-size: 0.72rem;
+        line-height: 1.3;
+      }
+
+      .project-title {
+        font-size: 1.28rem;
+        letter-spacing: 1px;
+        margin-top: 7px;
+      }
+    }
+
+    .navbar {
+      background: rgba(255, 255, 255, 0.4) !important;
+      backdrop-filter: blur(15px);
+      -webkit-backdrop-filter: blur(15px);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.6);
+      box-shadow: 0 4px 30px rgba(0, 0, 0, 0.05);
+    }
+
+    .navbar-brand {
+      font-weight: 800;
+      color: #1e3c72 !important;
+    }
+
+    .card,
+    .modal-content,
+    .table {
+      background: rgba(255, 255, 255, 0.7) !important;
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.8) !important;
+      border-radius: 20px;
+      box-shadow: 0 10px 40px 0 rgba(31, 38, 135, 0.08);
+      overflow: hidden;
+    }
+
+    .card-header,
+    .modal-header {
+      background: rgba(255, 255, 255, 0.5) !important;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.5) !important;
+      font-weight: 800;
+      font-size: 1.15rem;
+      color: #1e3c72;
+    }
+
+    .current-values {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+      gap: 25px;
+      margin-bottom: 30px;
+      margin-top: 10px;
+    }
+
+    .value-box {
+      padding: 28px 18px;
+      border-radius: 20px;
+      color: white;
+      text-align: center;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+      transition: all 0.3s ease;
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .value-box:hover {
+      transform: translateY(-8px);
+      box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+    }
+
+    .value-box p {
+      font-size: 1.05rem;
+      font-weight: 700;
+      margin-bottom: 5px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      opacity: 0.95;
+    }
+
+    .value-box h3 {
+      font-size: 2.8rem;
+      font-weight: 800;
+      margin: 0;
+      text-shadow: 2px 4px 8px rgba(0,0,0,0.2);
+    }
+
+    .nav-tabs {
+      border-bottom: none;
+      gap: 15px;
+      justify-content: center;
+      margin-bottom: 30px;
+    }
+
+    .nav-tabs .nav-link {
+      background: rgba(255, 255, 255, 0.5);
+      border: 1px solid rgba(255, 255, 255, 0.8);
+      border-radius: 30px;
+      padding: 12px 26px;
+      color: #4a5568;
+      font-weight: 700;
+      backdrop-filter: blur(10px);
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.02);
+    }
+
+    .nav-tabs .nav-link:hover {
+      background: rgba(255, 255, 255, 0.9);
+      transform: translateY(-3px);
+      box-shadow: 0 6px 15px rgba(0,0,0,0.05);
+    }
+
+    .nav-tabs .nav-link.active {
+      background: linear-gradient(135deg, #4e4376 0%, #2b5876 100%) !important;
+      color: white !important;
+      border-color: transparent !important;
+      box-shadow: 0 8px 20px rgba(43, 88, 118, 0.4);
+    }
+
+    .form-control,
+    .form-select {
+      background: rgba(255, 255, 255, 0.8);
+      border: 1px solid rgba(255, 255, 255, 0.9);
+      border-radius: 12px;
+      padding: 12px 15px;
+      box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
+    }
+
+    .form-control:focus,
+    .form-select:focus {
+      background: #ffffff;
+      box-shadow: 0 0 0 0.25rem rgba(43, 88, 118, 0.25);
+      border-color: #2b5876;
+    }
+
+    .chart-container {
+      background: rgba(255, 255, 255, 0.4);
+      border-radius: 16px;
+      padding: 20px;
+      margin-bottom: 25px;
+      border: 1px solid rgba(255, 255, 255, 0.6);
+      box-shadow: inset 0 0 20px rgba(255,255,255,0.5);
+      height: 310px;
+    }
+
+    .status-panel {
+      background: rgba(255, 255, 255, 0.65);
+      border: 1px solid rgba(255, 255, 255, 0.85);
+      border-radius: 20px;
+      padding: 18px 22px;
+      margin-bottom: 26px;
+      box-shadow: 0 10px 40px rgba(31, 38, 135, 0.08);
+    }
+
+    .footer {
+      text-align: center;
+      padding: 25px 0;
+      color: #4a5568;
+      font-weight: 700;
+      background: rgba(255, 255, 255, 0.3);
+      backdrop-filter: blur(15px);
+      border-top: 1px solid rgba(255, 255, 255, 0.5);
+      margin-top: 50px;
+    }
+
+    .table-hover tbody tr:hover {
+      background-color: rgba(255, 255, 255, 0.9) !important;
+      transform: scale(1.005);
+      transition: 0.2s;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+    }
+
+    .aqi-indicator {
+      display: inline-block;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      margin-right: 6px;
+      vertical-align: middle;
+    }
+
+    .aqi-good { background: #00a651; }
+    .aqi-moderate { background: #ffde33; }
+    .aqi-unhealthy-sensitive { background: #ff9933; }
+    .aqi-unhealthy { background: #cc0033; }
+    .aqi-very-unhealthy { background: #660099; }
+    .aqi-hazardous { background: #7e0023; }
+  </style>
+</head>
+<body>
+
+<div class="air-background">
+  <div class="heat-wave"></div>
+  <div class="humidity-cloud"></div>
+  <div class="dust-particles"></div>
+</div>
+
+<header class="school-header">
+  <div class="school-logo-box">
+    <img src="logo_truong.png" alt="Logo trường" class="school-logo">
+  </div>
+
+  <div class="school-text-box">
+    <h1 class="school-title">TRƯỜNG ĐẠI HỌC CÔNG NGHỆ KỸ THUẬT THÀNH PHỐ HỒ CHÍ MINH</h1>
+    <h2 class="faculty-title">KHOA ĐIỆN - ĐIỆN TỬ</h2>
+    <h3 class="project-title">SMART AIR</h3>
+  </div>
+
+  <div class="school-logo-box">
+    <img src="logo_khoa.jpg" alt="Logo khoa" class="school-logo">
+  </div>
+</header>
+
+<nav class="navbar navbar-dark">
+  <div class="container d-flex justify-content-end">
+    <div class="text-white">
+      <span id="connectionStatus" class="badge bg-success rounded-pill px-3 py-2"><i class="fas fa-plug me-1"></i>Đã kết nối</span>
+    </div>
+  </div>
+</nav>
+
+<div class="container mt-5">
+  <ul class="nav nav-tabs mb-4" id="myTab" role="tablist">
+    <li class="nav-item" role="presentation">
+      <button class="nav-link active" id="current-tab" data-bs-toggle="tab" data-bs-target="#current" type="button" role="tab"><i class="fas fa-chart-line me-2"></i>Dữ liệu hiện tại</button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" id="history-tab" data-bs-toggle="tab" data-bs-target="#history" type="button" role="tab"><i class="fas fa-history me-2"></i>Lịch sử</button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" id="control-tab" data-bs-toggle="tab" data-bs-target="#control" type="button" role="tab"><i class="fas fa-fan me-2"></i>Điều khiển</button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" id="config-tab" data-bs-toggle="tab" data-bs-target="#config" type="button" role="tab"><i class="fas fa-cog me-2"></i>Cài đặt</button>
+    </li>
+  </ul>
+
+  <div class="tab-content" id="myTabContent">
+    <div class="tab-pane fade show active" id="current" role="tabpanel">
+      <div class="current-values">
+        <div class="value-box" style="background: linear-gradient(135deg, #ff9a44 0%, #fc6076 100%);">
+          <p>Nhiệt độ</p>
+          <h3 id="currentTemp">-- °C</h3>
+        </div>
+        <div class="value-box" style="background: linear-gradient(135deg, #00c6ff 0%, #0072ff 100%);">
+          <p>Độ ẩm</p>
+          <h3 id="currentHumidity">-- %</h3>
+        </div>
+        <div class="value-box" style="background: linear-gradient(135deg, #8baaaa 0%, #ae8b9c 100%);">
+          <p>Bụi PM2.5</p>
+          <h3 id="currentPm25">-- µg/m³</h3>
+        </div>
+        <div class="value-box" style="background: linear-gradient(135deg, #56ab2f 0%, #a8e063 100%);">
+          <p>AQI</p>
+          <h3 id="currentAqi">--</h3>
+        </div>
+      </div>
+
+      <div class="status-panel">
+        <div class="row g-3">
+          <div class="col-md-4"><strong>Trạng thái không khí:</strong> <span id="currentStatus">--</span></div>
+          <div class="col-md-4"><strong>Thiết bị chấp hành:</strong> <span id="currentFan">--</span></div>
+          <div class="col-md-4"><strong>Chế độ:</strong> <span id="currentMode">--</span></div>
+          <div class="col-md-12"><strong>Cập nhật lần cuối:</strong> <span id="currentTimestamp">--</span></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+          <span><i class="fas fa-chart-bar me-2"></i>Biểu đồ dữ liệu theo thời gian</span>
+          <div class="d-flex align-items-center flex-wrap gap-2">
+            <button class="btn btn-sm btn-outline-dark" onclick="loadCurrentData(3)"><i class="fas fa-clock me-1"></i>3 giờ</button>
+            <button class="btn btn-sm btn-outline-dark" onclick="loadCurrentData(6)"><i class="fas fa-clock me-1"></i>6 giờ</button>
+            <button class="btn btn-sm btn-outline-dark" data-bs-toggle="modal" data-bs-target="#customTimeModal"><i class="fas fa-sliders-h me-1"></i>Tùy chỉnh</button>
+            <div class="form-check form-switch ms-md-3 mb-0">
+              <input class="form-check-input" type="checkbox" id="smoothToggle">
+              <label class="form-check-label text-dark fw-bold" for="smoothToggle">Làm mịn MA</label>
+            </div>
+            <div class="form-check form-switch ms-md-2 mb-0">
+              <input class="form-check-input" type="checkbox" id="noiseFilterToggle">
+              <label class="form-check-label text-dark fw-bold" for="noiseFilterToggle">Lọc nhiễu</label>
+            </div>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="chart-container"><canvas id="tempChart"></canvas></div>
+          <div class="chart-container"><canvas id="humiChart"></canvas></div>
+          <div class="chart-container"><canvas id="dustChart"></canvas></div>
+          <div class="chart-container"><canvas id="aqiChart"></canvas></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tab-pane fade" id="history" role="tabpanel">
+      <div class="card mb-4">
+        <div class="card-header"><i class="fas fa-search me-2"></i>Tìm kiếm lịch sử</div>
+        <div class="card-body">
+          <form id="historyForm" class="row g-3">
+            <div class="col-md-4">
+              <label class="form-label fw-bold">Từ ngày/giờ</label>
+              <input type="datetime-local" class="form-control" id="startDateTime" required>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-bold">Đến ngày/giờ</label>
+              <input type="datetime-local" class="form-control" id="endDateTime" required>
+            </div>
+            <div class="col-md-4 d-flex align-items-end gap-2">
+              <button type="submit" class="btn btn-primary px-3"><i class="fas fa-search me-2"></i>Tra cứu</button>
+              <button type="button" class="btn btn-warning text-dark fw-bold px-3" onclick="runPrediction()"><i class="fas fa-chart-line me-2"></i>Dự đoán AQI</button>
+              <button type="button" class="btn btn-success px-3" id="exportExcelBtn"><i class="fas fa-file-excel me-2"></i>Xuất Excel</button>
+            </div>
+          </form>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <span><i class="fas fa-table me-2"></i>Kết quả lịch sử</span>
+          <div class="form-check form-switch mb-0">
+            <input class="form-check-input" type="checkbox" id="showOutliersOnlyToggle">
+            <label class="form-check-label text-dark fw-bold" for="showOutliersOnlyToggle">Chỉ hiện giá trị bất thường</label>
+          </div>
+        </div>
+        <div class="card-body p-0">
+          <div class="table-responsive p-3">
+            <table class="table table-bordered table-hover align-middle" id="historyTable">
+              <thead class="table-light">
+                <tr>
+                  <th data-sort-key="time" style="cursor: pointer;">Thời gian <i class="fas fa-sort text-muted ms-1"></i></th>
+                  <th data-sort-key="temp" style="cursor: pointer;">Nhiệt độ (°C) <i class="fas fa-sort text-muted ms-1"></i></th>
+                  <th data-sort-key="humi" style="cursor: pointer;">Độ ẩm (%) <i class="fas fa-sort text-muted ms-1"></i></th>
+                  <th data-sort-key="dust" style="cursor: pointer;">PM2.5 (µg/m³) <i class="fas fa-sort text-muted ms-1"></i></th>
+                  <th data-sort-key="aqi" style="cursor: pointer;">AQI <i class="fas fa-sort text-muted ms-1"></i></th>
+                  <th data-sort-key="warning" style="cursor: pointer;">Trạng thái <i class="fas fa-sort text-muted ms-1"></i></th>
+                  <th>Thiết bị</th>
+                  <th>Chế độ</th>
+                </tr>
+              </thead>
+              <tbody id="historyTableBody">
+                <tr><td colspan="8" class="text-center py-4 text-muted">Chưa có dữ liệu. Vui lòng tra cứu!</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tab-pane fade" id="control" role="tabpanel">
+      <div class="card">
+        <div class="card-header"><i class="fas fa-fan me-2"></i>Điều khiển thiết bị chấp hành</div>
+        <div class="card-body">
+          <div class="row g-4">
+            <div class="col-md-6">
+              <label class="form-label fw-bold">Chế độ hoạt động</label>
+              <select class="form-select" id="modeSelect">
+                <option value="auto">Tự động</option>
+                <option value="manual">Thủ công</option>
+              </select>
+              <div class="form-text">Tự động: ESP32 bật/tắt theo ngưỡng PM2.5 hoặc AQI. Thủ công: làm theo trạng thái người dùng chọn.</div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-bold">Quạt / thiết bị lọc khí</label>
+              <select class="form-select" id="fanSelect">
+                <option value="false">Tắt</option>
+                <option value="true">Bật</option>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-bold">Ngưỡng PM2.5 (µg/m³)</label>
+              <input type="number" class="form-control" id="pm25Threshold" value="35" min="0" step="1">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-bold">Ngưỡng AQI</label>
+              <input type="number" class="form-control" id="aqiThreshold" value="100" min="0" step="1">
+            </div>
+            <div class="col-12">
+              <button class="btn btn-primary px-4" onclick="saveControlSettings()"><i class="fas fa-save me-2"></i>Lưu điều khiển</button>
+              <button class="btn btn-outline-secondary px-4 ms-2" onclick="loadControlSettings()"><i class="fas fa-sync me-2"></i>Tải lại</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tab-pane fade" id="config" role="tabpanel">
+      <div class="card">
+        <div class="card-header"><i class="fas fa-sliders-h me-2"></i>Cấu hình Firebase</div>
+        <div class="card-body">
+          <form id="configForm" class="config-form">
+            <div class="mb-4">
+              <label for="firebaseHost" class="form-label fw-bold">Firebase Host (URL)</label>
+              <input type="url" class="form-control" id="firebaseHost" placeholder="https://your-project.firebaseio.com/" required>
+              <div class="form-text mt-2"><i class="fas fa-info-circle me-1"></i>Database của hệ thống: https://smart-air-system-132aa-default-rtdb.firebaseio.com/</div>
+            </div>
+            <div class="mb-4">
+              <label for="firebaseAuth" class="form-label fw-bold">Auth Secret</label>
+              <input type="text" class="form-control" id="firebaseAuth" placeholder="Có thể để trống nếu Rules đang mở để test">
+              <div class="form-text mt-2"><i class="fas fa-key me-1"></i>Giai đoạn test có thể để trống vì Realtime Database đang cho phép đọc/ghi.</div>
+            </div>
+            <div class="mb-4">
+              <label for="firebasePath" class="form-label fw-bold">Đường dẫn dữ liệu (Node)</label>
+              <input type="text" class="form-control" id="firebasePath" placeholder="air_quality" value="air_quality">
+              <div class="form-text mt-2"><i class="fas fa-folder-open me-1"></i>Node gốc gồm current, history và control.</div>
+            </div>
+            <div class="d-flex gap-2">
+              <button type="submit" class="btn btn-primary px-4"><i class="fas fa-save me-2"></i>Lưu cấu hình</button>
+              <button type="button" class="btn btn-outline-secondary px-4" onclick="resetToDefaultConfig()"><i class="fas fa-undo me-2"></i>Khôi phục mặc định</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="footer">
+  <i class="fas fa-cloud-sun me-2"></i>Hệ thống điều hòa không khí thông minh - Giám sát, lưu trữ và điều khiển qua Firebase
+</div>
+
+<div class="modal fade" id="customTimeModal" tabindex="-1" aria-labelledby="customTimeModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header border-bottom-0">
+        <h5 class="modal-title fw-bold" id="customTimeModalLabel"><i class="fas fa-calendar-alt me-2 text-primary"></i>Chọn khoảng thời gian</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form id="customTimeForm">
+          <div class="mb-4">
+            <label class="form-label fw-bold text-secondary">Từ ngày/giờ</label>
+            <input type="datetime-local" class="form-control form-control-lg" id="customStart" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-bold text-secondary">Đến ngày/giờ</label>
+            <input type="datetime-local" class="form-control form-control-lg" id="customEnd" required>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer border-top-0 pt-0">
+        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Hủy</button>
+        <button type="button" class="btn btn-primary px-4" onclick="loadCustomRange()" data-bs-dismiss="modal"><i class="fas fa-eye me-2"></i>Xem dữ liệu</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+<script src="js/config.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/firebase.js"></script>
+<script src="js/charts.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
